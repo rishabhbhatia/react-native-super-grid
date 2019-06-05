@@ -1,9 +1,6 @@
 import React, { Component } from 'react';
-import {
-  View, Dimensions, ViewPropTypes, SectionList,
-} from 'react-native';
+import { View, Dimensions, ViewPropTypes, SectionList } from 'react-native';
 import PropTypes from 'prop-types';
-import { generateStyles, calculateDimensions, chunkArray } from './utils';
 
 class SectionGrid extends Component {
   constructor(props) {
@@ -20,7 +17,7 @@ class SectionGrid extends Component {
     }
 
     this.state = {
-      totalDimension,
+      totalDimension
     };
   }
 
@@ -33,7 +30,7 @@ class SectionGrid extends Component {
 
       if (totalDimension !== newTotalDimension) {
         this.setState({
-          totalDimension: newTotalDimension,
+          totalDimension: newTotalDimension
         });
       }
     }
@@ -52,7 +49,7 @@ class SectionGrid extends Component {
     rowStyle,
     separators,
     isFirstRow,
-    containerStyle,
+    containerStyle
   }) {
     const { spacing, itemContainerStyle, renderItem } = this.props;
 
@@ -60,7 +57,7 @@ class SectionGrid extends Component {
     let additionalRowStyle = {};
     if (isFirstRow) {
       additionalRowStyle = {
-        marginTop: spacing,
+        marginTop: spacing
       };
     }
 
@@ -68,15 +65,15 @@ class SectionGrid extends Component {
       <View style={[rowStyle, additionalRowStyle]}>
         {rowItems.map((item, i) => (
           <View
-            key={`item_${(rowIndex * itemsPerRow) + i}`}
+            key={`item_${rowIndex * itemsPerRow + i}`}
             style={[containerStyle, itemContainerStyle]}
           >
             {renderItem({
               item,
-              index: (rowIndex * itemsPerRow) + i,
+              index: rowIndex * itemsPerRow + i,
               section,
               separators,
-              rowIndex,
+              rowIndex
             })}
           </View>
         ))}
@@ -99,52 +96,146 @@ class SectionGrid extends Component {
 
     const { totalDimension } = this.state;
 
-    const { containerDimension, itemsPerRow, fixedSpacing } = calculateDimensions({
+    const {
+      containerDimension,
+      itemsPerRow,
+      fixedSpacing
+    } = this.calculateDimensions({
       itemDimension,
       staticDimension,
       totalDimension,
       spacing,
-      fixed,
+      fixed
     });
 
-    const { containerStyle, rowStyle } = generateStyles({
+    const { containerStyle, rowStyle } = this.generateStyles({
       itemDimension,
       containerDimension,
       spacing,
       fixedSpacing,
-      fixed,
+      fixed
     });
 
-    const groupedSections = sections.map((section) => {
-      const chunkedData = chunkArray(section.data, itemsPerRow);
+    const groupedSections = sections.map(section => {
+      const chunkedData = this.chunkArray(section.data, itemsPerRow);
 
       return {
         ...section,
         data: chunkedData,
-        originalData: section.data,
+        originalData: section.data
       };
     });
-
 
     return (
       <SectionList
         sections={groupedSections}
-        renderItem={({ item, index, section }) => this.renderRow({
-          rowItems: item,
-          rowIndex: index,
-          section,
-          isFirstRow: index === 0,
-          itemsPerRow,
-          rowStyle,
-          containerStyle,
-        })}
+        renderItem={({ item, index, section }) =>
+          this.renderRow({
+            rowItems: item,
+            rowIndex: index,
+            section,
+            isFirstRow: index === 0,
+            itemsPerRow,
+            rowStyle,
+            containerStyle
+          })
+        }
         keyExtractor={(_, index) => `row_${index}`}
         style={style}
         onLayout={this.onLayout}
-        ref={(sectionList) => { this.sectionList = sectionList; }}
+        ref={sectionList => {
+          this.sectionList = sectionList;
+        }}
         {...restProps}
       />
     );
+  }
+
+  chunkArray(array = [], size) {
+    if (array === []) return [];
+    return array.reduce((acc, val) => {
+      if (acc.length === 0) acc.push([]);
+      const last = acc[acc.length - 1];
+      if (last.length < size) {
+        last.push(val);
+      } else {
+        acc.push([val]);
+      }
+      return acc;
+    }, []);
+  }
+
+  calculateDimensions({
+    itemDimension,
+    staticDimension,
+    totalDimension,
+    fixed,
+    spacing
+  }) {
+    const usableTotalDimension = staticDimension || totalDimension;
+    const availableDimension = usableTotalDimension - spacing; // One spacing extra
+    const itemTotalDimension = Math.min(
+      itemDimension + spacing,
+      availableDimension
+    ); // itemTotalDimension should not exceed availableDimension
+    const itemsPerRow = Math.floor(availableDimension / itemTotalDimension);
+    const containerDimension = availableDimension / itemsPerRow;
+
+    let fixedSpacing;
+    if (fixed) {
+      fixedSpacing =
+        (totalDimension - itemDimension * itemsPerRow) / (itemsPerRow + 1);
+    }
+
+    return {
+      itemTotalDimension,
+      availableDimension,
+      itemsPerRow,
+      containerDimension,
+      fixedSpacing
+    };
+  }
+
+  generateStyles({
+    itemDimension,
+    containerDimension,
+    spacing,
+    fixed,
+    horizontal,
+    fixedSpacing
+  }) {
+    let rowStyle = {
+      flexDirection: 'row',
+      paddingLeft: fixed ? fixedSpacing : spacing,
+      paddingBottom: spacing
+    };
+
+    let containerStyle = {
+      flexDirection: 'column',
+      justifyContent: 'center',
+      width: fixed ? itemDimension : containerDimension - spacing,
+      marginRight: fixed ? fixedSpacing : spacing
+    };
+
+    if (horizontal) {
+      rowStyle = {
+        flexDirection: 'column',
+        paddingTop: fixed ? fixedSpacing : spacing,
+        paddingRight: spacing
+      };
+
+      containerStyle = {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        height: fixed ? itemDimension : containerDimension - spacing,
+        marginBottom: fixed ? fixedSpacing : spacing
+      };
+    }
+
+    return {
+      containerStyle,
+      rowStyle
+    };
   }
 }
 
@@ -157,7 +248,7 @@ SectionGrid.propTypes = {
   style: ViewPropTypes.style,
   itemContainerStyle: ViewPropTypes.style,
   staticDimension: PropTypes.number,
-  onLayout: PropTypes.func,
+  onLayout: PropTypes.func
 };
 
 SectionGrid.defaultProps = {
@@ -167,7 +258,7 @@ SectionGrid.defaultProps = {
   style: {},
   itemContainerStyle: undefined,
   staticDimension: undefined,
-  onLayout: null,
+  onLayout: null
 };
 
 export default SectionGrid;
